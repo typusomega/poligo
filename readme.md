@@ -45,6 +45,13 @@ func doAwesomeStuff() (interface{}, error) {
 
 ### Handle, HandleErrorType
 
+Very often we want to have all kinds of errors handled no matter their reason.
+
+```go
+policy.HandleAll().
+	Retry().
+```
+
 Sometimes checking errors is as trivial as just switching its type. 
 
 ```go

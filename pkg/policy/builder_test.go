@@ -2,6 +2,7 @@ package policy_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/stretchr/testify/assert"
@@ -60,4 +61,20 @@ func (test *PolicySuite) TestAllGivenErrorsAreHandledWithOrCascade() {
 		return AnotherCustomError{}
 	})
 	assert.Equal(test.T(), 2, callCount, "retried but different error was thrown")
+}
+
+func (test *PolicySuite) TestHandleAllHandlesAllKindsOfErrors() {
+	errs := []error{CustomError{}, AnotherCustomError{}, fmt.Errorf("fail"), errors.New("")}
+	expectedRetries := len(errs) - 1
+	callCount := 0
+
+	policy.HandleAll().
+		Retry(policy.WithRetries(expectedRetries)).
+		ExecuteVoid(context.Background(), func() error {
+			err := errs[callCount]
+			callCount++
+			return err
+		})
+
+	assert.Equal(test.T(), expectedRetries+1, callCount, "not all kinds of errors were handled")
 }

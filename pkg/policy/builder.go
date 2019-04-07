@@ -19,6 +19,13 @@ func HandleType(errorObj interface{}) ErrorBuilder {
 	}
 }
 
+// HandleAll handles all kinds of errors
+func HandleAll() Builder {
+	return &builder{
+		handlePredicate: func(_ error) bool { return true },
+	}
+}
+
 // Builder is used to build complex policies
 type Builder interface {
 	Retry(opts ...RetryOption) *RetryPolicy
