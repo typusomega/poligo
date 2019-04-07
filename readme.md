@@ -43,6 +43,31 @@ func doAwesomeStuff() (interface{}, error) {
 }
 ```
 
+### Handle, HandleErrorType
+
+Sometimes checking errors is as trivial as just switching its type. 
+
+```go
+policy.HandleErrorType(MyCustomError{}).
+	Or(AnotherCustomError{}).
+```
+
+But in some cases we have special needs and need special policies for specific states of a given error.
+This is when `policy.Handle` comes into play.
+
+```go
+	// only handle errors with `lenghtNegative` with this policy
+	pol := policy.Handle(func(err error) bool {
+		if err != nil {
+			if err, ok := err.(*areaError); ok {
+				if err.lengthNegative() {
+					return true
+				}
+			}
+		}
+		return false
+	}).Retry()
+```
 
 
 

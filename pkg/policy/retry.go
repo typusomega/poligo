@@ -5,6 +5,9 @@ import (
 	"time"
 )
 
+// DefaultRetries is the default number of retries if not overriden by options
+const DefaultRetries = 1
+
 // RetryPolicy is a policy supporting retries
 type RetryPolicy struct {
 	policy
@@ -13,17 +16,6 @@ type RetryPolicy struct {
 	sleepDurationProvider SleepDurationProvider
 	callback              OnRetryCallback
 	predicates            []RetryPredicate
-}
-
-func newRetryPolicy(plcy policy) *RetryPolicy {
-	return &RetryPolicy{
-		policy:                plcy,
-		expectedRetries:       1,
-		sleepDurationProvider: func(int) (time.Duration, bool) { return time.Nanosecond, false },
-		predicates:            []RetryPredicate{},
-		callback:              func(err error, retryCount int) {},
-	}
-
 }
 
 // ExecuteVoid calls the given action and applies the policy
