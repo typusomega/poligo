@@ -5,9 +5,6 @@ import (
 	"time"
 )
 
-// DefaultRetries is the default number of retries if not overriden by options
-const DefaultRetries = 1
-
 // RetryPolicy is a policy supporting retries
 type RetryPolicy struct {
 	policy

@@ -4,6 +4,9 @@ import (
 	"time"
 )
 
+// DefaultRetries is the default number of retries if not overriden by options
+const DefaultRetries = 1
+
 func defaultRetryPolicy() *RetryPolicy {
 	return &RetryPolicy{
 		expectedRetries:       DefaultRetries,
