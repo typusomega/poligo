@@ -2,6 +2,14 @@
 
 PoliGo is a Go resilience and fault-handling library to help developers express policies such as Retry in a fluent manner.
 
+## Installation
+
+__go.mod__
+`require github.com/typusomega/poliGo`
+
+__go get__
+`go get github.com/typusomega/poliGo`
+
 ## How to use
 
 ```go
