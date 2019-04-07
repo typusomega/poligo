@@ -12,8 +12,8 @@ func Handle(predicate HandlePredicate) Builder {
 	}
 }
 
-// HandleErrorType is the entrypoint to build policies handling errors of the type of the given errorObj
-func HandleErrorType(errorObj interface{}) ErrorBuilder {
+// HandleType is the entrypoint to build policies handling errors of the type of the given errorObj
+func HandleType(errorObj interface{}) ErrorBuilder {
 	return &builder{
 		handlePredicate: func(err error) bool { return reflect.TypeOf(err) == reflect.TypeOf(errorObj) },
 	}

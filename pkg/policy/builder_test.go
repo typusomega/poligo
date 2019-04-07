@@ -22,9 +22,9 @@ func (AnotherCustomError) Error() string {
 	return ""
 }
 
-func (test *PolicySuite) TestOnlyGivenErrorsAreHandledInHandleErrorType() {
+func (test *PolicySuite) TestOnlyGivenErrorsAreHandledInHandleType() {
 	callCount := 0
-	policy.HandleErrorType(CustomError{}).
+	policy.HandleType(CustomError{}).
 		Retry().
 		ExecuteVoid(context.Background(), func() error {
 			callCount++
@@ -33,7 +33,7 @@ func (test *PolicySuite) TestOnlyGivenErrorsAreHandledInHandleErrorType() {
 	assert.Equal(test.T(), 1, callCount, "retried but different error was thrown")
 
 	callCount = 0
-	policy.HandleErrorType(CustomError{}).
+	policy.HandleType(CustomError{}).
 		Retry().
 		ExecuteVoid(context.Background(), func() error {
 			callCount++
@@ -43,7 +43,7 @@ func (test *PolicySuite) TestOnlyGivenErrorsAreHandledInHandleErrorType() {
 }
 
 func (test *PolicySuite) TestAllGivenErrorsAreHandledWithOrCascade() {
-	plcy := policy.HandleErrorType(CustomError{}).
+	plcy := policy.HandleType(CustomError{}).
 		Or(AnotherCustomError{}).
 		Retry()
 
