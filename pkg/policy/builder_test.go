@@ -1,9 +1,9 @@
 package policy_test
 
 import (
-	"context"
-	"errors"
 	"fmt"
+	"reflect"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/typusomega/poliGo/pkg/policy"
@@ -23,58 +23,88 @@ func (AnotherCustomError) Error() string {
 	return ""
 }
 
-func (test *PolicySuite) TestOnlyGivenErrorsAreHandledInHandleType() {
-	callCount := 0
-	policy.HandleType(CustomError{}).
-		Retry().
-		ExecuteVoid(context.Background(), func() error {
-			callCount++
-			return fmt.Errorf("")
-		})
-	assert.Equal(test.T(), 1, callCount, "retried but different error was thrown")
+func (test *PolicySuite) TestHandleSetsBasePolicy() {
+	var expectedFunc policy.HandlePredicate = (func(error) bool { return false })
 
-	callCount = 0
-	policy.HandleType(CustomError{}).
-		Retry().
-		ExecuteVoid(context.Background(), func() error {
-			callCount++
-			return CustomError{}
-		})
-	assert.Equal(test.T(), 2, callCount, "retried but different error was thrown")
+	plcy := policy.Handle(expectedFunc).Retry()
+
+	assert.Equal(test.T(), reflect.ValueOf(expectedFunc), reflect.ValueOf(plcy.BasePolicy.ShouldHandle), "policy's ShouldHandle not set correctly")
+}
+
+func (test *PolicySuite) TestOnlyGivenErrorsAreHandledInHandleType() {
+	fn := policy.HandleType(CustomError{}).
+		Retry().BasePolicy.ShouldHandle
+
+	assert.False(test.T(), fn(fmt.Errorf("")), "ShouldHandle returned true but wrong error type was given")
+	assert.True(test.T(), fn(CustomError{}), "ShouldHandle returned false but correct error type was given")
 }
 
 func (test *PolicySuite) TestAllGivenErrorsAreHandledWithOrCascade() {
-	plcy := policy.HandleType(CustomError{}).
+	fn := policy.HandleType(CustomError{}).
 		Or(AnotherCustomError{}).
-		Retry()
+		Or(fmt.Errorf("")).
+		Retry().BasePolicy.ShouldHandle
 
-	callCount := 0
-	plcy.ExecuteVoid(context.Background(), func() error {
-		callCount++
-		return CustomError{}
-	})
-	assert.Equal(test.T(), 2, callCount, "retried but different error was thrown")
-
-	callCount = 0
-	plcy.ExecuteVoid(context.Background(), func() error {
-		callCount++
-		return AnotherCustomError{}
-	})
-	assert.Equal(test.T(), 2, callCount, "retried but different error was thrown")
+	assert.True(test.T(), fn(CustomError{}), "ShouldHandle returned false but correct error type was given")
+	assert.True(test.T(), fn(AnotherCustomError{}), "ShouldHandle returned false but correct error type was given")
+	assert.True(test.T(), fn(fmt.Errorf("test")), "ShouldHandle returned false but correct error type was given")
 }
 
 func (test *PolicySuite) TestHandleAllHandlesAllKindsOfErrors() {
-	errs := []error{CustomError{}, AnotherCustomError{}, fmt.Errorf("fail"), errors.New("")}
-	expectedRetries := len(errs) - 1
-	callCount := 0
+	fn := policy.HandleAll().
+		Retry().BasePolicy.ShouldHandle
 
-	policy.HandleAll().
-		Retry(policy.WithRetries(expectedRetries)).
-		ExecuteVoid(context.Background(), func() error {
-			err := errs[callCount]
-			callCount++
-			return err
-		})
+	assert.True(test.T(), fn(CustomError{}), "ShouldHandle returned false but correct error type was given")
+	assert.True(test.T(), fn(AnotherCustomError{}), "ShouldHandle returned false but correct error type was given")
+	assert.True(test.T(), fn(fmt.Errorf("test")), "ShouldHandle returned false but correct error type was given")
+}
 
-	assert.Equal(test.T(), expectedRetries+1, callCount, "not all kinds of errors were handled")
+func (test *PolicySuite) TestRetryWithDurationsSetsSleepProviderAccordingly() {
+	expectedDurations := []time.Duration{time.Nanosecond, time.Nanosecond * 2, time.Nanosecond * 3}
+
+	sleepProvider := policy.HandleAll().
+		Retry(policy.WithDurations(expectedDurations...)).SleepDurationProvider
+
+	for i, expectedDuration := range expectedDurations {
+		duration, _ := sleepProvider(i)
+		assert.Equal(test.T(), expectedDuration, duration, "sleepProvider duration does not match given duration")
+	}
+
+	dur, ok := sleepProvider(123)
+	assert.Equal(test.T(), expectedDurations[len(expectedDurations)-1], dur, "sleepProvider duration does not match given duration")
+	assert.False(test.T(), ok, "sleepProvider returned ok without having duration configured")
+}
+
+func (test *PolicySuite) TestWithSleepDurationProviderSetsCorrectProvider() {
+	var expectedFunc policy.SleepDurationProvider = func(try int) (duration time.Duration, ok bool) { return time.Second, false }
+
+	plcy := policy.HandleAll().Retry(policy.WithSleepDurationProvider(expectedFunc))
+
+	assert.Equal(test.T(), reflect.ValueOf(expectedFunc), reflect.ValueOf(plcy.SleepDurationProvider), "policy's SleepDurationProvider not set correctly")
+}
+
+func (test *PolicySuite) TestWithRetriesSetsRetriesCorrectly() {
+	expectedRetries := 4
+
+	plcy := policy.HandleAll().Retry(policy.WithRetries(expectedRetries))
+
+	assert.Equal(test.T(), expectedRetries, plcy.ExpectedRetries, "policy's ExpectedRetries not set correctly")
+}
+
+func (test *PolicySuite) TestWithCallbackSetsCallback() {
+	var expectedFunc policy.OnRetryCallback = func(err error, retryCount int) {}
+
+	plcy := policy.HandleAll().Retry(policy.WithCallback(expectedFunc))
+
+	assert.Equal(test.T(), reflect.ValueOf(expectedFunc), reflect.ValueOf(plcy.Callback), "policy's Callback not set correctly")
+}
+
+func (test *PolicySuite) TestWithPredicatesSetsPredicates() {
+	var pred1 policy.RetryPredicate = func(val interface{}) bool { return true }
+	var pred2 policy.RetryPredicate = func(val interface{}) bool { return false }
+	expectedPredicates := []policy.RetryPredicate{pred1, pred2}
+
+	plcy := policy.HandleAll().Retry(policy.WithPredicates(expectedPredicates...))
+
+	assert.Equal(test.T(), expectedPredicates, plcy.Predicates, "policy's Predicates not set correctly")
 }

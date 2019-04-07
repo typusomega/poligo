@@ -1,6 +1,9 @@
 package policy
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // Policy represents a specific policy
 type Policy interface {
@@ -10,6 +13,10 @@ type Policy interface {
 	Execute(ctx context.Context, action func() (interface{}, error)) (interface{}, error)
 }
 
-type policy struct {
-	shouldHandle HandlePredicate
+// BasePolicy is the base, all policy types have in common
+type BasePolicy struct {
+	ShouldHandle HandlePredicate
 }
+
+// SleepDurationProvider provides the next sleep duration for the given try
+type SleepDurationProvider func(try int) (duration time.Duration, ok bool)

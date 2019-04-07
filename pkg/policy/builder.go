@@ -2,6 +2,7 @@ package policy
 
 import (
 	"reflect"
+	"time"
 )
 
 // Handle is the entrypoint to build complex policies
@@ -59,12 +60,53 @@ func (it *builder) Or(errorObj interface{}) ErrorBuilder {
 
 // Retry creates a RetryPolicy
 func (it *builder) Retry(opts ...RetryOption) *RetryPolicy {
-	plcy := defaultRetryPolicy()
-	plcy.policy = policy{shouldHandle: it.handlePredicate}
+	plcy := DefaultRetryPolicy()
+	plcy.BasePolicy = BasePolicy{ShouldHandle: it.handlePredicate}
 
 	for _, opt := range opts {
 		opt(plcy)
 	}
 
 	return plcy
+}
+
+// WithDurations sets durations for the diverse retries
+func WithDurations(durations ...time.Duration) RetryOption {
+	return func(o *RetryPolicy) {
+		o.SleepDurationProvider = func(try int) (duration time.Duration, ok bool) {
+			length := len(durations)
+			if try < length {
+				return durations[try], true
+			}
+			return durations[length-1], false
+		}
+	}
+}
+
+// WithSleepDurationProvider sets the SleepDurationProvider
+func WithSleepDurationProvider(provider SleepDurationProvider) RetryOption {
+	return func(o *RetryPolicy) {
+		o.SleepDurationProvider = provider
+	}
+}
+
+// WithRetries sets retries
+func WithRetries(retries int) RetryOption {
+	return func(o *RetryPolicy) {
+		o.ExpectedRetries = retries
+	}
+}
+
+// WithCallback sets on retry callback
+func WithCallback(callback OnRetryCallback) RetryOption {
+	return func(o *RetryPolicy) {
+		o.Callback = callback
+	}
+}
+
+// WithPredicates sets predicates checking for retry
+func WithPredicates(predicates ...RetryPredicate) RetryOption {
+	return func(o *RetryPolicy) {
+		o.Predicates = predicates
+	}
 }

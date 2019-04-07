@@ -7,12 +7,12 @@ import (
 
 // RetryPolicy is a policy supporting retries
 type RetryPolicy struct {
-	policy
+	BasePolicy
 
-	expectedRetries       int
-	sleepDurationProvider SleepDurationProvider
-	callback              OnRetryCallback
-	predicates            []RetryPredicate
+	ExpectedRetries       int
+	SleepDurationProvider SleepDurationProvider
+	Callback              OnRetryCallback
+	Predicates            []RetryPredicate
 }
 
 // ExecuteVoid calls the given action and applies the policy
@@ -29,7 +29,7 @@ func (it *RetryPolicy) ExecuteVoid(ctx context.Context, action func() error) err
 				return nil
 			}
 
-			if !it.shouldHandle(err) {
+			if !it.ShouldHandle(err) {
 				return err
 			}
 
@@ -37,7 +37,7 @@ func (it *RetryPolicy) ExecuteVoid(ctx context.Context, action func() error) err
 				return err
 			}
 
-			it.callback(err, tryCount)
+			it.Callback(err, tryCount)
 		}
 		tryCount++
 	}
@@ -55,7 +55,7 @@ func (it *RetryPolicy) Execute(ctx context.Context, action func() (interface{}, 
 			val, err := action()
 
 			if err == nil {
-				for _, pred := range it.predicates {
+				for _, pred := range it.Predicates {
 					if pred(val) {
 						continue
 					} else {
@@ -64,7 +64,7 @@ func (it *RetryPolicy) Execute(ctx context.Context, action func() (interface{}, 
 				}
 			}
 
-			if !it.shouldHandle(err) {
+			if !it.ShouldHandle(err) {
 				return val, err
 			}
 
@@ -72,15 +72,15 @@ func (it *RetryPolicy) Execute(ctx context.Context, action func() (interface{}, 
 				return val, err
 			}
 
-			it.callback(err, tryCount)
+			it.Callback(err, tryCount)
 		}
 		tryCount++
 	}
 }
 
 func (it *RetryPolicy) sleepIfRetryable(tryCount int) bool {
-	sleepDuration, durationProvided := it.sleepDurationProvider(tryCount)
-	canRetry := tryCount < it.expectedRetries || durationProvided
+	sleepDuration, durationProvided := it.SleepDurationProvider(tryCount)
+	canRetry := tryCount < it.ExpectedRetries || durationProvided
 	if !canRetry {
 		return false
 	}
@@ -96,49 +96,5 @@ type OnRetryCallback func(err error, retryCount int)
 // RetryPredicate checks whether another retry is necessary
 type RetryPredicate func(val interface{}) bool
 
-// SleepDurationProvider provides the next sleep duration for the given try
-type SleepDurationProvider func(try int) (duration time.Duration, ok bool)
-
-// RetryOption options to enhance RetryPolicy
+// RetryOption modifies the RetryPolicy
 type RetryOption func(*RetryPolicy)
-
-// WithDurations sets durations for the diverse retries
-func WithDurations(durations ...time.Duration) RetryOption {
-	return func(o *RetryPolicy) {
-		o.sleepDurationProvider = func(try int) (duration time.Duration, ok bool) {
-			length := len(durations)
-			if try < length {
-				return durations[try], true
-			}
-			return durations[length-1], false
-		}
-	}
-}
-
-// WithSleepDurationProvider sets the SleepDurationProvider
-func WithSleepDurationProvider(provider SleepDurationProvider) RetryOption {
-	return func(o *RetryPolicy) {
-		o.sleepDurationProvider = provider
-	}
-}
-
-// WithRetries sets retries
-func WithRetries(retries int) RetryOption {
-	return func(o *RetryPolicy) {
-		o.expectedRetries = retries
-	}
-}
-
-// WithCallback sets on retry callback
-func WithCallback(callback OnRetryCallback) RetryOption {
-	return func(o *RetryPolicy) {
-		o.callback = callback
-	}
-}
-
-// WithPredicates sets predicates checking for retry
-func WithPredicates(predicates ...RetryPredicate) RetryOption {
-	return func(o *RetryPolicy) {
-		o.predicates = predicates
-	}
-}

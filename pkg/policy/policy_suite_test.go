@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+	"github.com/typusomega/poliGo/pkg/policy"
 )
 
 type PolicySuite struct {
@@ -16,4 +17,8 @@ func TestPolicy(t *testing.T) {
 
 func (it *PolicySuite) SetupTest() {
 
+}
+
+func HandleAllBasePolicy() policy.BasePolicy {
+	return *policy.DefaultBasePolicy()
 }
