@@ -21,7 +21,7 @@ func (test *PolicySuite) TestExecuteCalled() {
 	assert.True(test.T(), executeCalled, "execute not called")
 }
 
-func (test *PolicySuite) TestHandledCalledOnError() {
+func (test *PolicySuite) TestHandleCalledOnError() {
 	handleCalled := false
 	retry := policy.DefaultRetryPolicy()
 	retry.BasePolicy.ShouldHandle = func(err error) bool {

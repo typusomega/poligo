@@ -23,6 +23,8 @@ func (AnotherCustomError) Error() string {
 	return ""
 }
 
+// handle
+
 func (test *PolicySuite) TestHandleSetsBasePolicy() {
 	var expectedFunc policy.HandlePredicate = (func(error) bool { return false })
 
@@ -58,6 +60,8 @@ func (test *PolicySuite) TestHandleAllHandlesAllKindsOfErrors() {
 	assert.True(test.T(), fn(AnotherCustomError{}), "ShouldHandle returned false but correct error type was given")
 	assert.True(test.T(), fn(fmt.Errorf("test")), "ShouldHandle returned false but correct error type was given")
 }
+
+// retry
 
 func (test *PolicySuite) TestRetryWithDurationsSetsSleepProviderAccordingly() {
 	expectedDurations := []time.Duration{time.Nanosecond, time.Nanosecond * 2, time.Nanosecond * 3}
@@ -107,4 +111,30 @@ func (test *PolicySuite) TestWithPredicatesSetsPredicates() {
 	plcy := policy.HandleAll().Retry(policy.WithPredicates(expectedPredicates...))
 
 	assert.Equal(test.T(), expectedPredicates, plcy.Predicates, "policy's Predicates not set correctly")
+}
+
+// circuit breaker
+
+func (test *PolicySuite) TestWithBrokenForProviderSetsBrokenForProvider() {
+	var expectedFunc policy.SleepDurationProvider = func(try int) (duration time.Duration, ok bool) { return time.Second, true }
+
+	plcy := policy.HandleAll().WithCircuitBreaker(policy.WithBrokenForProvider(expectedFunc))
+
+	assert.Equal(test.T(), reflect.ValueOf(expectedFunc), reflect.ValueOf(plcy.BrokenForProvider), "policy's BrokenForProvider not set correctly")
+}
+
+func (test *PolicySuite) TestWithOnBreakCallbackSetsOnBreak() {
+	var expectedFunc policy.OnBreakCallback = func(error, time.Duration) {}
+
+	plcy := policy.HandleAll().WithCircuitBreaker(policy.WithOnBreakCallback(expectedFunc))
+
+	assert.Equal(test.T(), reflect.ValueOf(expectedFunc), reflect.ValueOf(plcy.OnBreak), "policy's OnBreakCallback not set correctly")
+}
+
+func (test *PolicySuite) TestWithOnResetCallbackSetsOnReset() {
+	var expectedFunc func() = func() {}
+
+	plcy := policy.HandleAll().WithCircuitBreaker(policy.WithOnResetCallback(expectedFunc))
+
+	assert.Equal(test.T(), reflect.ValueOf(expectedFunc), reflect.ValueOf(plcy.OnReset), "policy's OnReset not set correctly")
 }

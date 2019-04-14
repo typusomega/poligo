@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"sync"
 	"time"
 )
 
@@ -20,5 +21,19 @@ func DefaultRetryPolicy() *RetryPolicy {
 		SleepDurationProvider: func(int) (time.Duration, bool) { return time.Nanosecond, false },
 		Predicates:            []RetryPredicate{},
 		Callback:              func(err error, retryCount int) {},
+	}
+}
+
+// DefaultCircuitBreakerPolicy is the default DefaultCircuitBreakerPolicy
+func DefaultCircuitBreakerPolicy() *CircuitBreakerPolicy {
+	return &CircuitBreakerPolicy{
+		BasePolicy:        *DefaultBasePolicy(),
+		MaxErrors:         DefaultRetries,
+		BrokenForProvider: func(try int) (duration time.Duration, ok bool) { return time.Second * 2, true },
+		OnBreak:           func(error, time.Duration) {},
+		OnReset:           func() {},
+		broken:            false,
+		consecutiveErrors: 0,
+		mux:               sync.Mutex{},
 	}
 }

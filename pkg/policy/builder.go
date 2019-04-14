@@ -30,6 +30,7 @@ func HandleAll() Builder {
 // Builder is used to build complex policies
 type Builder interface {
 	Retry(opts ...RetryOption) *RetryPolicy
+	WithCircuitBreaker(opts ...CircuitBreakerOption) *CircuitBreakerPolicy
 }
 
 // ErrorBuilder is used to build complex error policies
@@ -110,3 +111,42 @@ func WithPredicates(predicates ...RetryPredicate) RetryOption {
 		o.Predicates = predicates
 	}
 }
+
+// WithCircuitBreaker creates a CircuitBreakerPolicy
+func (it *builder) WithCircuitBreaker(opts ...CircuitBreakerOption) *CircuitBreakerPolicy {
+	plcy := DefaultCircuitBreakerPolicy()
+	plcy.BasePolicy = BasePolicy{ShouldHandle: it.handlePredicate}
+
+	for _, opt := range opts {
+		opt(plcy)
+	}
+
+	return plcy
+}
+
+// WithBrokenForProvider sets the SleepDurationProvider telling how long to keep the circuit broken for
+func WithBrokenForProvider(provider SleepDurationProvider) CircuitBreakerOption {
+	return func(o *CircuitBreakerPolicy) {
+		o.BrokenForProvider = provider
+	}
+}
+
+// WithOnBreakCallback sets the callback to be called whenever the circuit is broken
+func WithOnBreakCallback(callback OnBreakCallback) CircuitBreakerOption {
+	return func(o *CircuitBreakerPolicy) {
+		o.OnBreak = callback
+	}
+}
+
+// WithOnResetCallback sets the callback to be called whenever the circuit is reset
+func WithOnResetCallback(callback func()) CircuitBreakerOption {
+	return func(o *CircuitBreakerPolicy) {
+		o.OnReset = callback
+	}
+}
+
+// OnBreakCallback is the callback to be called whenever the circuit is broken
+type OnBreakCallback func(error, time.Duration)
+
+// CircuitBreakerOption modifies the CircuitBreakerPolicy
+type CircuitBreakerOption func(*CircuitBreakerPolicy)
