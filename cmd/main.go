@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/typusomega/poliGo/pkg/policy"
+	"github.com/typusomega/poligo/pkg/policy"
 )
 
 func main() {

@@ -6,18 +6,19 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/typusomega/poliGo/pkg/policy"
+	"github.com/typusomega/poligo/pkg/policy"
 )
 
 func (test *PolicySuite) TestCBExecuteCalled() {
 	executeCalled := false
 
 	circuitBreaker := policy.DefaultCircuitBreakerPolicy()
-	circuitBreaker.Execute(context.Background(), func() (interface{}, error) {
+	_, err := circuitBreaker.Execute(context.Background(), func() (interface{}, error) {
 		executeCalled = true
 		return nil, fmt.Errorf("fail")
 	})
 
+	assert.NotNil(test.T(), err)
 	assert.True(test.T(), executeCalled, "execute not called")
 }
 
@@ -30,8 +31,9 @@ func (test *PolicySuite) TestCBHandleCalledOnError() {
 		return true
 	}
 
-	circuitBreaker.Execute(context.Background(), defaultFailingAction)
+	_, err := circuitBreaker.Execute(context.Background(), defaultFailingAction)
 
+	assert.NotNil(test.T(), err)
 	assert.True(test.T(), handleCalled, "handle not called")
 }
 
@@ -66,9 +68,12 @@ func (test *PolicySuite) TestExecuteNotCalledWhenMoreThanMaxErrors() {
 		return nil, fmt.Errorf("fail")
 	}
 
-	circuitBreaker.Execute(context.Background(), execute)
-	circuitBreaker.Execute(context.Background(), execute)
-	circuitBreaker.Execute(context.Background(), execute)
+	_, err := circuitBreaker.Execute(context.Background(), execute)
+	assert.NotNil(test.T(), err)
+	_, err = circuitBreaker.Execute(context.Background(), execute)
+	assert.NotNil(test.T(), err)
+	_, err = circuitBreaker.Execute(context.Background(), execute)
+	assert.NotNil(test.T(), err)
 
 	assert.Equal(test.T(), 1, executeCalled, "execute not called as often as expected")
 }
@@ -92,11 +97,12 @@ func (test *PolicySuite) TestVoidCBExecuteCalled() {
 	executeCalled := false
 
 	circuitBreaker := policy.DefaultCircuitBreakerPolicy()
-	circuitBreaker.ExecuteVoid(context.Background(), func() error {
+	err := circuitBreaker.ExecuteVoid(context.Background(), func() error {
 		executeCalled = true
 		return fmt.Errorf("fail")
 	})
 
+	assert.NotNil(test.T(), err)
 	assert.True(test.T(), executeCalled, "execute not called")
 }
 
@@ -109,8 +115,9 @@ func (test *PolicySuite) TestVoidCBHandleCalledOnError() {
 		return true
 	}
 
-	circuitBreaker.ExecuteVoid(context.Background(), defaultFailingVoidAction)
+	err := circuitBreaker.ExecuteVoid(context.Background(), defaultFailingVoidAction)
 
+	assert.NotNil(test.T(), err)
 	assert.True(test.T(), handleCalled, "handle not called")
 }
 
@@ -145,9 +152,12 @@ func (test *PolicySuite) TestVoidExecuteNotCalledWhenMoreThanMaxErrors() {
 		return fmt.Errorf("fail")
 	}
 
-	circuitBreaker.ExecuteVoid(context.Background(), execute)
-	circuitBreaker.ExecuteVoid(context.Background(), execute)
-	circuitBreaker.ExecuteVoid(context.Background(), execute)
+	err := circuitBreaker.ExecuteVoid(context.Background(), execute)
+	assert.NotNil(test.T(), err)
+	err = circuitBreaker.ExecuteVoid(context.Background(), execute)
+	assert.NotNil(test.T(), err)
+	err = circuitBreaker.ExecuteVoid(context.Background(), execute)
+	assert.NotNil(test.T(), err)
 
 	assert.Equal(test.T(), 1, executeCalled, "execute not called as often as expected")
 }

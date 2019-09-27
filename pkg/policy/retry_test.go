@@ -6,18 +6,19 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/typusomega/poliGo/pkg/policy"
+	"github.com/typusomega/poligo/pkg/policy"
 )
 
 func (test *PolicySuite) TestExecuteCalled() {
 	executeCalled := false
 	retry := policy.DefaultRetryPolicy()
 
-	retry.Execute(context.Background(), func() (interface{}, error) {
+	_, err := retry.Execute(context.Background(), func() (interface{}, error) {
 		executeCalled = true
 		return nil, fmt.Errorf("fail")
 	})
 
+	assert.NotNil(test.T(), err)
 	assert.True(test.T(), executeCalled, "execute not called")
 }
 
@@ -29,8 +30,9 @@ func (test *PolicySuite) TestHandleCalledOnError() {
 		return true
 	}
 
-	retry.Execute(context.Background(), func() (interface{}, error) { return nil, fmt.Errorf("fail") })
+	_, err := retry.Execute(context.Background(), func() (interface{}, error) { return nil, fmt.Errorf("fail") })
 
+	assert.NotNil(test.T(), err)
 	assert.True(test.T(), handleCalled, "handle not called")
 }
 
@@ -40,20 +42,22 @@ func (test *PolicySuite) TestRetriesOnlyIfHandleIsTrue() {
 	retry.BasePolicy.ShouldHandle = func(err error) bool {
 		return true
 	}
-	retry.Execute(context.Background(), func() (interface{}, error) {
+	_, err := retry.Execute(context.Background(), func() (interface{}, error) {
 		callCount++
 		return nil, nil
 	})
+	assert.Nil(test.T(), err)
 	assert.Equal(test.T(), 2, callCount, "does not retry even if predicates are met")
 
 	callCount = 0
 	retry.BasePolicy.ShouldHandle = func(err error) bool {
 		return false
 	}
-	retry.Execute(context.Background(), func() (interface{}, error) {
+	_, err = retry.Execute(context.Background(), func() (interface{}, error) {
 		callCount++
 		return nil, nil
 	})
+	assert.Nil(test.T(), err)
 	assert.Equal(test.T(), 1, callCount, "execute not called twice")
 }
 
@@ -65,10 +69,11 @@ func (test *PolicySuite) TestRetriesOnlyIfPredicatesAreMet() {
 			return true
 		},
 	}
-	retry.Execute(context.Background(), func() (interface{}, error) {
+	_, err := retry.Execute(context.Background(), func() (interface{}, error) {
 		callCount++
 		return nil, nil
 	})
+	assert.Nil(test.T(), err)
 	assert.Equal(test.T(), 2, callCount, "does not retry even if predicates are met")
 
 	callCount = 0
@@ -77,10 +82,11 @@ func (test *PolicySuite) TestRetriesOnlyIfPredicatesAreMet() {
 			return false
 		},
 	}
-	retry.Execute(context.Background(), func() (interface{}, error) {
+	_, err = retry.Execute(context.Background(), func() (interface{}, error) {
 		callCount++
 		return nil, nil
 	})
+	assert.Nil(test.T(), err)
 	assert.Equal(test.T(), 1, callCount, "execute not called twice")
 }
 
@@ -94,7 +100,8 @@ func (test *PolicySuite) TestPredicatesReceiveCorrectInput() {
 			return true
 		},
 	}
-	retry.Execute(context.Background(), func() (interface{}, error) { return expectedVal, nil })
+	_, err := retry.Execute(context.Background(), func() (interface{}, error) { return expectedVal, nil })
+	assert.Nil(test.T(), err)
 }
 
 func (test *PolicySuite) TestRetriesAsMuchAsConfigured() {
@@ -103,11 +110,12 @@ func (test *PolicySuite) TestRetriesAsMuchAsConfigured() {
 	retry := policy.DefaultRetryPolicy()
 
 	retry.ExpectedRetries = expectedRetries
-	retry.Execute(context.Background(), func() (interface{}, error) {
+	_, err := retry.Execute(context.Background(), func() (interface{}, error) {
 		callCount++
 		return nil, fmt.Errorf("fail")
 	})
 
+	assert.NotNil(test.T(), err)
 	assert.Equal(test.T(), expectedRetries+1, callCount, "execute not called as much as configured")
 }
 
@@ -116,10 +124,11 @@ func (test *PolicySuite) TestCallbackIsExecutedOnEachRetry() {
 	retry := policy.DefaultRetryPolicy()
 
 	retry.Callback = func(err error, retryCount int) { callbackCallCount++ }
-	retry.Execute(context.Background(), func() (interface{}, error) {
+	_, err := retry.Execute(context.Background(), func() (interface{}, error) {
 		return nil, fmt.Errorf("fail")
 	})
 
+	assert.NotNil(test.T(), err)
 	assert.Equal(test.T(), 1, callbackCallCount, "execute not called as much as configured")
 }
 
@@ -130,7 +139,7 @@ func (test *PolicySuite) TestRetriesAreStoppedWhenContextCancelled() {
 	retry := policy.DefaultRetryPolicy()
 
 	retry.ExpectedRetries = 5
-	retry.Execute(ctx, func() (interface{}, error) {
+	_, err := retry.Execute(ctx, func() (interface{}, error) {
 		callCount++
 		if callCount >= expectedCalls {
 			cancel()
@@ -138,6 +147,7 @@ func (test *PolicySuite) TestRetriesAreStoppedWhenContextCancelled() {
 		return nil, fmt.Errorf("fail")
 	})
 
+	assert.NotNil(test.T(), err)
 	assert.Equal(test.T(), expectedCalls, callCount, "context cancel did not stop retries")
 }
 
@@ -152,11 +162,12 @@ func (test *PolicySuite) TestSleepDurationProviderIsUsedOnEachRetry() {
 		}
 		return time.Nanosecond, true
 	}
-	retry.Execute(context.Background(), func() (interface{}, error) {
+	_, err := retry.Execute(context.Background(), func() (interface{}, error) {
 		callCount++
 		return nil, fmt.Errorf("fail")
 	})
 
+	assert.NotNil(test.T(), err)
 	assert.Equal(test.T(), expectedCalls, callCount, "was not called like configured in sleepDurationProvider")
 }
 
@@ -166,11 +177,12 @@ func (test *PolicySuite) TestVoidExecuteCalled() {
 	executeCalled := false
 	retry := policy.DefaultRetryPolicy()
 
-	retry.ExecuteVoid(context.Background(), func() error {
+	err := retry.ExecuteVoid(context.Background(), func() error {
 		executeCalled = true
 		return fmt.Errorf("fail")
 	})
 
+	assert.NotNil(test.T(), err)
 	assert.True(test.T(), executeCalled, "execute not called")
 }
 
@@ -182,28 +194,31 @@ func (test *PolicySuite) TestVoidHandleCalledOnError() {
 		handleCalled = true
 		return true
 	}
-	retry.ExecuteVoid(context.Background(), func() error { return fmt.Errorf("fail") })
+	err := retry.ExecuteVoid(context.Background(), func() error { return fmt.Errorf("fail") })
 
+	assert.NotNil(test.T(), err)
 	assert.True(test.T(), handleCalled, "handle not called")
 }
 
 func (test *PolicySuite) TestVoidRetriesOnlyIfHandleIsTrue() {
 	callCount := 0
 	retry := policy.DefaultRetryPolicy()
-	retry.ExecuteVoid(context.Background(), func() error {
+	err := retry.ExecuteVoid(context.Background(), func() error {
 		callCount++
 		return fmt.Errorf("")
 	})
+	assert.NotNil(test.T(), err)
 	assert.Equal(test.T(), 2, callCount, "does not retry even if handle is true")
 
 	callCount = 0
 	retry.BasePolicy.ShouldHandle = func(err error) bool {
 		return false
 	}
-	retry.ExecuteVoid(context.Background(), func() error {
+	err = retry.ExecuteVoid(context.Background(), func() error {
 		callCount++
 		return fmt.Errorf("")
 	})
+	assert.NotNil(test.T(), err)
 	assert.Equal(test.T(), 1, callCount, "execute not called twice")
 }
 
@@ -217,10 +232,11 @@ func (test *PolicySuite) TestVoidIgnoresPredicates() {
 			return true
 		},
 	}
-	retry.ExecuteVoid(context.Background(), func() error {
+	err := retry.ExecuteVoid(context.Background(), func() error {
 		return nil
 	})
 
+	assert.Nil(test.T(), err)
 	assert.Equal(test.T(), 0, callCount, "predicate called")
 }
 
@@ -230,11 +246,12 @@ func (test *PolicySuite) TestVoidRetriesAsMuchAsConfigured() {
 	retry := policy.DefaultRetryPolicy()
 
 	retry.ExpectedRetries = expectedRetries
-	retry.ExecuteVoid(context.Background(), func() error {
+	err := retry.ExecuteVoid(context.Background(), func() error {
 		callCount++
 		return fmt.Errorf("fail")
 	})
 
+	assert.NotNil(test.T(), err)
 	assert.Equal(test.T(), expectedRetries+1, callCount, "execute not called as much as configured")
 }
 
@@ -243,11 +260,12 @@ func (test *PolicySuite) TestVoidCallbackIsExecutedOnEachRetry() {
 	retry := policy.DefaultRetryPolicy()
 
 	retry.Callback = func(err error, retryCount int) { callbackCallCount++ }
-	retry.ExecuteVoid(context.Background(), func() error {
+	err := retry.ExecuteVoid(context.Background(), func() error {
 		return fmt.Errorf("fail")
 
 	})
 
+	assert.NotNil(test.T(), err)
 	assert.Equal(test.T(), 1, callbackCallCount, "execute not called as much as configured")
 }
 
@@ -258,7 +276,7 @@ func (test *PolicySuite) TestVoidRetriesAreStoppedWhenContextCancelled() {
 	retry := policy.DefaultRetryPolicy()
 
 	retry.ExpectedRetries = 5
-	retry.ExecuteVoid(ctx, func() error {
+	err := retry.ExecuteVoid(ctx, func() error {
 		callCount++
 		if callCount >= expectedCalls {
 			cancel()
@@ -266,6 +284,7 @@ func (test *PolicySuite) TestVoidRetriesAreStoppedWhenContextCancelled() {
 		return fmt.Errorf("fail")
 	})
 
+	assert.NotNil(test.T(), err)
 	assert.Equal(test.T(), expectedCalls, callCount, "context cancel did not stop retries")
 }
 
@@ -281,10 +300,11 @@ func (test *PolicySuite) TestVoidSleepDurationProviderIsUsedOnEachRetry() {
 		return time.Nanosecond, true
 	}
 
-	retry.ExecuteVoid(context.Background(), func() error {
+	err := retry.ExecuteVoid(context.Background(), func() error {
 		callCount++
 		return fmt.Errorf("fail")
 	})
 
+	assert.NotNil(test.T(), err)
 	assert.Equal(test.T(), expectedCalls, callCount, "was not called like configured in sleepDurationProvider")
 }

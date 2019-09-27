@@ -13,29 +13,26 @@ PKGS = $(shell go list ./...)
 
 export CGO_ENABLED:=0
 
-all: build
+all: verify build
 
-lint:
-		$(Q)GO111MODULE=off go get -u golang.org/x/lint/golint
-		$(Q)GO111MODULE=off go install golang.org/x/lint/golint
-		$(Q)golint -set_exit_status $(PKGS)
-
-chkvet:
-		$(Q)test -z $$(go vet ./...)
-
-chkfmt:
-		$(Q)test -z $$(gofmt -l .)
-
-verify: lint chkvet chkfmt test
+lint: fmt
+		$(Q)echo "linting...."
+		$(Q)GO111MODULE=off go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+		$(Q)golangci-lint run -E gofmt -E golint -E goconst -E gocritic -E golint -E gosec -E maligned -E nakedret -E prealloc -E unconvert -E gocyclo -E scopelint -E goimports
+		$(Q)echo linting OK
 
 test:
-		$(Q)go test -timeout 10s ./pkg/...
+		$(Q)echo "unit testing...."
+		$(Q)go test ./pkg/...
+
+verify: test lint
+
+clean:
+		$(Q)rm -rf build
 
 fmt:
-		$(Q)gofmt -w .
+		$(Q)echo "fixing imports and format...."
+		$(Q)goimports -w .
 
-generate:
-		$(Q)go generate ./...
-
-build: generate verify
-		$(Q)$(GOARGS) go build .
+build: verify
+		$(Q)$(GOARGS) go build ./pkg/policy

@@ -5,10 +5,10 @@ PoliGo is a Go resilience and fault-handling library to help developers express 
 ## Installation
 
 __go.mod__
-`require github.com/typusomega/poliGo`
+`require github.com/typusomega/poligo`
 
 __go get__
-`go get github.com/typusomega/poliGo`
+`go get github.com/typusomega/poligo`
 
 ## How to use
 
@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/typusomega/poliGo/pkg/policy"
+	"github.com/typusomega/poligo/pkg/policy"
 )
 
 func main() {

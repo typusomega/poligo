@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/typusomega/poliGo/pkg/policy"
+	"github.com/typusomega/poligo/pkg/policy"
 )
 
 type CustomError struct {
@@ -132,7 +132,7 @@ func (test *PolicySuite) TestWithOnBreakCallbackSetsOnBreak() {
 }
 
 func (test *PolicySuite) TestWithOnResetCallbackSetsOnReset() {
-	var expectedFunc func() = func() {}
+	var expectedFunc = func() {}
 
 	plcy := policy.HandleAll().WithCircuitBreaker(policy.WithOnResetCallback(expectedFunc))
 
