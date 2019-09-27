@@ -23,7 +23,7 @@ func HandleType(errorObj interface{}) ErrorBuilder {
 // HandleAll handles all kinds of errors
 func HandleAll() Builder {
 	return &builder{
-		handlePredicate: func(_ error) bool { return true },
+		handlePredicate: func(err error) bool { return err != nil },
 	}
 }
 

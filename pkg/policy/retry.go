@@ -56,9 +56,7 @@ func (it *RetryPolicy) Execute(ctx context.Context, action func() (interface{}, 
 
 			if err == nil {
 				for _, pred := range it.Predicates {
-					if pred(val) {
-						continue
-					} else {
+					if !pred(val) {
 						return val, nil
 					}
 				}
